@@ -1,11 +1,10 @@
 <?php
 /**
- * 
  * dlGeo class
  *
  * Developer: Pigalov Denis
- * E-mail: denis.p@direcltine.su
- * Copyright: (c) 2014
+ * E-mail: foritel@gmail.com
+ * Copyright: (c) 2016
  * 
  * @return geolocation info about user ip (http://ya.ru/ as example)
  * @return array, format:
@@ -52,6 +51,10 @@ class dlGeo
 		$this->site_encoding = defined("SITE_CHARSET") ? SITE_CHARSET : $this->fallback_encoding;
 		$this->storage = &$_SESSION["GEOIP"];
 		$this->servers = array(
+			"api_sypexgeo_net" => array(
+				"xml" => "http://api.sypexgeo.net/xml/[ip]",
+				"json" => "http://api.sypexgeo.net/json/[ip]"
+			),
 			"ipgeobase_ru" => array(
 				"xml" => "http://ipgeobase.ru:7020/geo/?ip=[ip]",
 				"json" => "http://ipgeobase.ru:7020/geo/?ip=[ip]&json=1"
@@ -63,10 +66,6 @@ class dlGeo
 			"geoplugin_net" => array(
 				"xml" => "http://geoplugin.net/xml.gp?ip=[ip]",
 				"json" => "http://geoplugin.net/json.gp?ip=[ip]"
-			),
-			"api_sypexgeo_net" => array(
-				"xml" => "http://api.sypexgeo.net/xml/[ip]",
-				"json" => "http://api.sypexgeo.net/json/[ip]"
 			),
 			// 5000/day
 			"ru_smart_ip_net" => array(
@@ -99,6 +98,10 @@ class dlGeo
 		}
 		else {
 			$this->ip = $this->GetIP();
+		}
+
+		if (is_array($this->storage) && array_key_exists('city', $this->storage) && empty($this->storage['city'])) {
+			$this->storage = false;
 		}
 
 		// fill session info
@@ -242,6 +245,11 @@ class dlGeo
 			if( $this->return_json ) {
 				// json
 				$jsonData = json_decode($data, true);
+
+				// if error
+				if (array_key_exists('error', $jsonData) && !empty($jsonData['error']))
+					return false;
+
 				$this->storage = array(
 					"ip" => $this->ip,
 					"country" => $jsonData["country"]["name_ru"],
@@ -256,6 +264,11 @@ class dlGeo
 				// xml
 				$xmlData = new SimpleXMLElement($data);
 				$xmlData = $xmlData->ip;
+
+				// if error
+				if (isset($xmlData->error) && !empty($xmlData->error))
+					return false;
+
 				$this->storage = array(
 					"ip" => $this->ip,
 					"country" => $xmlData->country->name_ru->__toString(),
@@ -325,6 +338,9 @@ class dlGeo
 				return false;
 			}
 			return $response;
+		}
+		else {
+			return false;
 		}
 	}
 
